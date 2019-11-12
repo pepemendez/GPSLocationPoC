@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Albo poc GPS</string>
+    <string name="permission_rationale">We should access to your current location</string>
+    <string name="permission_denied_explanation">permission_denied_explanation</string>
+    <string name="settings">settings</string>
+    <string name="latitude_label">Latitude</string>
+    <string name="longitude_label">Longitude</string>
+    <string name="resource_device_id">resource_device_id</string>
+    <string name="couldnt_retreive_gps_coordinates">Unable to get GPS coordinates</string>
+</resources>
