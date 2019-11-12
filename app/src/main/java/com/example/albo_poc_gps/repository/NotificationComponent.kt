@@ -10,7 +10,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import android.media.RingtoneManager
 import android.media.Ringtone
-
+import com.example.albo_poc_gps.R
 
 
 private const val FCM_API = "https://fcm.googleapis.com/fcm/send"
@@ -56,7 +56,7 @@ object NotificationComponent : ApiComponent {
     override fun sendLocation(applicationContext: Context, latitude: Double, longitude: Double, f: (JSONObject) -> Unit, error: () -> Unit){
         playSound(applicationContext)
 
-        val topic = "/topics/albopoc" //topic has to match what the receiver subscribed to
+        val topic = applicationContext.getString(R.string.notification_topic) //topic has to match what the receiver subscribed to
         val notification = JSONObject()
         val notificationBody = JSONObject()
 

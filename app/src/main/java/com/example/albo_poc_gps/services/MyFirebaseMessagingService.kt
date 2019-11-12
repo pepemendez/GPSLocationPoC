@@ -17,7 +17,7 @@ import kotlin.random.Random
 import android.os.VibrationEffect
 import android.os.Build
 import android.os.Vibrator
-
+import com.example.albo_poc_gps.R
 
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
@@ -61,15 +61,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 .setAutoCancel(true)
                 .setSound(notificationSoundUri)
                 .setContentIntent(pendingIntent)
-
-            //Set notification color to match your app color template
             notificationBuilder.color = resources.getColor(android.R.color.background_dark)
-
             notificationManager.notify(notificationID, notificationBuilder.build())
         }
         else{
-            //val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            //    v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
             playSound(applicationContext)
         }
     }
@@ -86,8 +81,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun setupChannels(notificationManager: NotificationManager?) {
-        val adminChannelName = "New notification"
-        val adminChannelDescription = "Device to device notification"
+        val adminChannelName = getString(R.string.new_notification)
+        val adminChannelDescription = getString(R.string.new_notification_description)
 
         val adminChannel: NotificationChannel
         adminChannel = NotificationChannel(ADMIN_CHANNEL_ID, adminChannelName, NotificationManager.IMPORTANCE_HIGH)

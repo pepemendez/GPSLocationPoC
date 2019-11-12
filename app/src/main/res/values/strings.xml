@@ -7,4 +7,10 @@
     <string name="longitude_label">Longitude</string>
     <string name="resource_device_id">resource_device_id</string>
     <string name="couldnt_retreive_gps_coordinates">Unable to get GPS coordinates</string>
+    <string name="new_notification">New notification</string>
+    <string name="new_notification_description">Device to device notification</string>
+    <string name="notification_topic">/topics/albopoc</string>
+    <string name="no_sensor_found">\"No Accelerometer Sensor!\"</string>
+    <string name="network_error">Request error</string>
+    <string name="turn_on_location">Turn on location</string>
 </resources>

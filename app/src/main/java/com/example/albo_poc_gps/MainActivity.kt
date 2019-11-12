@@ -28,11 +28,10 @@ import androidx.core.app.ActivityCompat
 import com.example.albo_poc_gps.data.Movement
 import com.google.android.gms.location.*
 
-class MainActivity : AppCompatActivity(), View.OnClickListener, SensorEventListener {
+class MainActivity : AppCompatActivity(), SensorEventListener {
 
-    private lateinit var movement: Movement
+    private lateinit var movementCounter: Movement
     private lateinit var tvLocation: TextView
-    private lateinit var btnNotification: Button
     private val _repository = ApiRepository
     var sensorManager: SensorManager? = null
     lateinit var mFusedLocationClient: FusedLocationProviderClient
@@ -45,13 +44,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, SensorEventListe
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         tvLocation = findViewById(R.id.tv_location)
-        btnNotification = findViewById(R.id.button_notification)
-        btnNotification.setOnClickListener(this)
 
-        movement = Movement()
+        movementCounter = Movement()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
-        FirebaseMessaging.getInstance().subscribeToTopic("/topics/albopoc")
+        FirebaseMessaging.getInstance().subscribeToTopic(getString(R.string.notification_topic))
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         getLastLocation()
     }
@@ -61,7 +58,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, SensorEventListe
         var stepsSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         if (stepsSensor == null) {
-            Toast.makeText(this, "No Step Counter Sensor!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.no_sensor_found, Toast.LENGTH_SHORT).show()
         } else {
             sensorManager?.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_NORMAL)
         }
@@ -73,18 +70,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, SensorEventListe
     }
 
     fun printmovement(){
-        val text = movement.print()
+        val text = movementCounter.print()
         if(text.count() > 0)
             tvLocation.text = text
-    }
-
-    override fun onClick(v: View?) {
-        /*if(v == btnNotification){
-            movement = Movement()
-            printmovement()
-        }*/
-
-        buttonNotificationClicked()
     }
 
     private fun sendLocation(){
@@ -99,23 +87,18 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, SensorEventListe
         }
     }
 
-    private fun buttonNotificationClicked(){
-        Toast.makeText(this@MainActivity, "You clicked me.", Toast.LENGTH_SHORT).show()
-        sendLocation()
-    }
-
     private fun sendLocationResponse(response: JSONObject) {
         Log.wtf("TAG", "onResponse: $response")
     }
 
     private fun connectionError() {
-        Toast.makeText(this@MainActivity, "Request error", Toast.LENGTH_LONG).show()
+        Toast.makeText(this@MainActivity, R.string.network_error, Toast.LENGTH_LONG).show()
     }
 
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type === Sensor.TYPE_ACCELEROMETER) {
             // Shake detection
-            movement.addMovement(event.values.clone()){
+            movementCounter.addMovement(event.values.clone()){
                 sendLocation()
             }
 
@@ -166,7 +149,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, SensorEventListe
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             Log.wtf("TAG", "mLocationCallback")
-
             mCurrentLocation = locationResult.lastLocation
         }
     }
@@ -203,7 +185,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, SensorEventListe
                     }
                 }
             } else {
-                Toast.makeText(this, "Turn on location", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, R.string.turn_on_location, Toast.LENGTH_LONG).show()
                 val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 startActivity(intent)
             }
