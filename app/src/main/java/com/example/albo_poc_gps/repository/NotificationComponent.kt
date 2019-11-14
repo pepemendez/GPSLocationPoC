@@ -8,8 +8,6 @@ import com.android.volley.toolbox.Volley
 import com.example.albo_poc_gps.data.UserPreferences
 import org.json.JSONException
 import org.json.JSONObject
-import android.media.RingtoneManager
-import android.media.Ringtone
 import com.example.albo_poc_gps.R
 import com.example.albo_poc_gps.httpRequestHelpers.NotificationBody
 

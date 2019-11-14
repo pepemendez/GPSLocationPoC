@@ -1,20 +1,9 @@
 package com.example.albo_poc_gps.repository
 
-import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.util.Log
-import com.android.volley.Response
-import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.Volley
-import com.example.albo_poc_gps.data.UserPreferences
-import org.json.JSONException
-import org.json.JSONObject
-import android.media.RingtoneManager
-import android.media.Ringtone
-import com.example.albo_poc_gps.R
 import com.example.albo_poc_gps.data.Movement
 
 interface IMovementComponent {
