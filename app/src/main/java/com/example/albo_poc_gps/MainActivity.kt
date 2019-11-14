@@ -25,31 +25,32 @@ import com.google.firebase.messaging.FirebaseMessaging
 import org.json.JSONObject
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
+import com.example.albo_poc_gps.data.Coordinates
 import com.example.albo_poc_gps.data.Movement
 import com.google.android.gms.location.*
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.android.gms.tasks.Task
 
-class MainActivity : AppCompatActivity(), SensorEventListener {
+class MainActivity : AppCompatActivity(), SensorEventListener, OnCompleteListener<Location> {
 
-    private lateinit var movementCounter: Movement
     private lateinit var tvLocation: TextView
     private val _repository = ApiRepository
-    var sensorManager: SensorManager? = null
+    private var sensorManager: SensorManager? = null
     lateinit var mFusedLocationClient: FusedLocationProviderClient
-    lateinit var mCurrentLocation: Location
+    lateinit var mCurrentLocation: Coordinates
 
-
-    private val REQUEST_PERMISSIONS_REQUEST_CODE = 420
+    private val REQUESTPERMISSIONSREQUESTCODE = 420
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         tvLocation = findViewById(R.id.tv_location)
 
-        movementCounter = Movement()
+        mCurrentLocation = Coordinates()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         FirebaseMessaging.getInstance().subscribeToTopic(getString(R.string.notification_topic))
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         getLastLocation()
     }
 
@@ -58,7 +59,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         var stepsSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         if (stepsSensor == null) {
-            Toast.makeText(this, R.string.no_sensor_found, Toast.LENGTH_SHORT).show()
+            showUserMessage(R.string.no_sensor_found)
         } else {
             sensorManager?.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_NORMAL)
         }
@@ -69,16 +70,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sensorManager?.unregisterListener(this)
     }
 
-    fun printmovement(){
-        val text = movementCounter.print()
+    private fun printMovement(){
+        val text = _repository.status()
         if(text.count() > 0)
             tvLocation.text = text
     }
 
+    private fun showUserMessage(message: Int){
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
     private fun sendLocation(){
         if(::mCurrentLocation.isInitialized) {
-            _repository.sendLocation(
-                this.applicationContext,
+            _repository.sendLocation(this.applicationContext,
                 mCurrentLocation.latitude,
                 mCurrentLocation.longitude,
                 ::sendLocationResponse,
@@ -92,20 +96,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun connectionError() {
-        Toast.makeText(this@MainActivity, R.string.network_error, Toast.LENGTH_LONG).show()
+        showUserMessage(R.string.network_error)
     }
 
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type === Sensor.TYPE_ACCELEROMETER) {
             // Shake detection
-            movementCounter.addMovement(event.values.clone()){
-                sendLocation()
+            _repository.registerMovement(event.values.clone()){
+                shouldSendLocation ->
+                if(shouldSendLocation) {
+                    sendLocation()
+                }
             }
-
-            printmovement()
-        }
-        if (event.sensor.type === Sensor.TYPE_STEP_COUNTER) {
-            tvLocation.text = "${event.values[0]}"
+            printMovement()
         }
     }
 
@@ -118,12 +121,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         return permissionState == PackageManager.PERMISSION_GRANTED
     }
 
-
     private fun requestPermissions() {
         ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
-            REQUEST_PERMISSIONS_REQUEST_CODE
+            REQUESTPERMISSIONSREQUESTCODE
         )
     }
 
@@ -133,23 +135,39 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,
-                                            grantResults: IntArray) {
+    private fun openLocationSettings(){
+        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+        startActivity(intent)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,grantResults: IntArray) {
         Log.wtf("TAG", "onRequestPermissionResult")
-        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted.
-            } else {
-                Toast.makeText(this@MainActivity, getString(R.string.permission_denied_explanation), Toast.LENGTH_LONG).show()
-                requestPermissions()
-            }
+        if ((requestCode == REQUESTPERMISSIONSREQUESTCODE) && (grantResults[0] != PackageManager.PERMISSION_GRANTED)) {
+            Toast.makeText(this@MainActivity, getString(R.string.permission_denied_explanation), Toast.LENGTH_LONG).show()
+            requestPermissions()
+        }
+        else{
+            getLastLocation()
         }
     }
 
     private val mLocationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            Log.wtf("TAG", "mLocationCallback")
-            mCurrentLocation = locationResult.lastLocation
+        override fun onLocationResult(location: LocationResult) {
+            Log.wtf("TAG", "mLocationCallback ${location.lastLocation.latitude} ${location.lastLocation.longitude}")
+            mCurrentLocation.update(location.lastLocation.latitude, location.lastLocation.longitude)
+        }
+    }
+
+    override fun onComplete(task: Task<Location>) {
+        Log.wtf("TAG", "onComplete")
+
+        val location: Location? = task.result
+        if (location == null) {
+            showUserMessage(R.string.couldnt_retreive_gps_coordinates)
+            requestNewLocationData()
+        } else {
+            mCurrentLocation.update(location.latitude, location.longitude)
+            requestNewLocationData()
         }
     }
 
@@ -161,10 +179,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         mLocationRequest.fastestInterval = 500
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        mFusedLocationClient!!.requestLocationUpdates(
-            mLocationRequest, mLocationCallback,
-            Looper.myLooper()
-        )
+        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
     }
 
     @SuppressLint("MissingPermission")
@@ -173,21 +188,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         if (checkPermissions()) {
             if (isLocationEnabled()) {
-                mFusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
-                    val location: Location? = task.result
-                    if (location == null) {
-                        Toast.makeText(this@MainActivity, getString(R.string.couldnt_retreive_gps_coordinates), Toast.LENGTH_LONG).show()
-                        requestNewLocationData()
-
-                    } else {
-                        mCurrentLocation = location
-                        requestNewLocationData()
-                    }
-                }
+                mFusedLocationClient.lastLocation.addOnCompleteListener(this)
             } else {
-                Toast.makeText(this, R.string.turn_on_location, Toast.LENGTH_LONG).show()
-                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                startActivity(intent)
+                showUserMessage(R.string.turn_on_location)
+                openLocationSettings()
             }
         } else {
             requestPermissions()

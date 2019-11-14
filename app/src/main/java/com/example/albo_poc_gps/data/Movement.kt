@@ -13,14 +13,23 @@ class Movement{
     private var currentTimeStamp: Long = 0.toLong()
 
     private var started = false
-    private var timeelapsed: Double = 0.toDouble()
+    private var timeElapsed: Double = 0.toDouble()
 
-    private var SAMPLE_SIZE = 50.0 // change this sample size as you want, higher is more precise but slow measure.
-    private var THRESHOLD = 0.9 // change this threshold as you want, higher is more spike movement
-
+    private val SAMPLESIZE = 50.0 // change this sample size as you want, higher is more precise but slow measure.
+    private val THRESHOLD = 0.9 // change this threshold as you want, higher is more spike movement
+    private val COEFICIENT = 0.9f
+    private val MAXTIMEELAPSED = 2.0
     private var hitCount = 0
     private var hitSum = 0.0
     private var hitResult = 0.0
+
+    val status: String get(){
+        return if(started) {
+            "Walking\n$timeElapsed"
+        } else{
+            "Stop Walking \nLasted: $timeElapsed"
+        }
+    }
 
     init {
         mAccel = 0.00
@@ -28,59 +37,51 @@ class Movement{
         mAccelLast = SensorManager.GRAVITY_EARTH.toDouble()
     }
 
-    fun addMovement(event: FloatArray, sendLocation: () -> Unit){
+    fun addMovement(event: FloatArray, shouldUpdateLocation: (Boolean) -> Unit){
         mGravity = event
 
         // Shake detection
         val x = mGravity[0].toDouble()
         val y = mGravity[1].toDouble()
         val z = mGravity[2].toDouble()
+
         mAccelLast = mAccelCurrent
         mAccelCurrent = Math.sqrt(x * x + y * y + z * z)
+
         val delta = mAccelCurrent - mAccelLast
-        mAccel = mAccel * 0.9f + delta
+        mAccel = mAccel * COEFICIENT + delta
 
         currentTimeStamp = System.currentTimeMillis()
 
-        if (hitCount <= SAMPLE_SIZE) {
+        if (hitCount <= SAMPLESIZE) {
             hitCount++
             hitSum += Math.abs(mAccel)
         } else {
-            hitResult = hitSum / SAMPLE_SIZE
+            hitResult = hitSum / SAMPLESIZE
 
             if (hitResult > THRESHOLD) {
                 if (!started) {
                     started = true
                 } else {
-                    timeelapsed += (currentTimeStamp.toDouble() - lastTimeStamp.toDouble()) / 1000.toDouble()
+                    timeElapsed += (currentTimeStamp.toDouble() - lastTimeStamp.toDouble()) / 1000.toDouble()
                 }
                 lastTimeStamp = currentTimeStamp
             } else {
                 if (started) {
                     started = false
-                    timeelapsed += (currentTimeStamp.toDouble() - lastTimeStamp.toDouble()) / 1000.toDouble()
+                    timeElapsed += (currentTimeStamp.toDouble() - lastTimeStamp.toDouble()) / 1000.toDouble()
                 }
             }
 
-            if (timeelapsed > 2) {
-                sendLocation()
-                val integerPart = timeelapsed.roundToInt()
-                timeelapsed -= integerPart
+            if (timeElapsed >= MAXTIMEELAPSED) {
+                shouldUpdateLocation(true)
+                val integerPart = timeElapsed.roundToInt()
+                timeElapsed -= integerPart
             }
 
             hitCount = 0
             hitSum = 0.0
             hitResult = 0.0
         }
-    }
-
-    fun print(): String{
-        if(started) {
-            return "Walking\n$timeelapsed"
-        }
-        else{
-            return "Stop Walking \nLasted: $timeelapsed"
-        }
-
     }
 }

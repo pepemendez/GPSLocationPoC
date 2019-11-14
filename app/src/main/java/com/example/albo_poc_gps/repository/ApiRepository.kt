@@ -4,12 +4,22 @@ import android.content.Context
 import org.json.JSONObject
 
 
-interface ApiComponent: INotificationComponent
+interface ApiComponent: INotificationComponent, IMovementComponent
 
 object ApiRepository: ApiComponent {
-    private val repository: INotificationComponent = NotificationComponent
+
+    private val notificationRepository: INotificationComponent = NotificationComponent
+    private val movementRepository: IMovementComponent = AccelerationComponent
 
     override fun sendLocation(applicationContext: Context, latitude: Double, longitude: Double, response: (JSONObject) -> Unit, error: () -> Unit) {
-        repository.sendLocation(applicationContext, latitude, longitude, response, error)
+        notificationRepository.sendLocation(applicationContext, latitude, longitude, response, error)
+    }
+
+    override fun registerMovement(event: FloatArray, shouldUpdateLocation: (Boolean) -> Unit) {
+        movementRepository.registerMovement(event, shouldUpdateLocation)
+    }
+
+    override fun status(): String {
+        return movementRepository.status()
     }
 }

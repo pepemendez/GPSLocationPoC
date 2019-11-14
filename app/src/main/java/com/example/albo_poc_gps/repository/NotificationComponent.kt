@@ -21,7 +21,7 @@ interface INotificationComponent {
     fun sendLocation(applicationContext: Context, latitude: Double, longitude: Double, response: (JSONObject) -> Unit, error: () -> Unit)
 }
 
-object NotificationComponent : ApiComponent {
+object NotificationComponent : INotificationComponent {
 
     private fun playSound(applicationContext: Context){
         try {
