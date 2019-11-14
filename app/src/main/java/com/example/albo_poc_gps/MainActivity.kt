@@ -27,11 +27,12 @@ import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import com.example.albo_poc_gps.data.Coordinates
 import com.example.albo_poc_gps.data.Movement
+import com.example.albo_poc_gps.repository.MovementComponentListener
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 
-class MainActivity : AppCompatActivity(), SensorEventListener, OnCompleteListener<Location> {
+class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteListener<Location> {
 
     private lateinit var tvLocation: TextView
     private val _repository = ApiRepository
@@ -56,31 +57,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnCompleteListene
 
     override fun onResume() {
         super.onResume()
-        var stepsSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-        if (stepsSensor == null) {
+        if(_repository.registerMovementListener(sensorManager!!, this)){
+            showUserMessage(R.string.sensor_started)
+        }
+        else{
             showUserMessage(R.string.no_sensor_found)
-        } else {
-            sensorManager?.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_NORMAL)
         }
     }
 
     override fun onPause() {
         super.onPause()
-        sensorManager?.unregisterListener(this)
-    }
-
-    private fun printMovement(){
-        val text = _repository.status()
-        if(text.count() > 0)
-            tvLocation.text = text
+        _repository.unregisterMovementListener()
     }
 
     private fun showUserMessage(message: Int){
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun sendLocation(){
+    override fun sendLocation(){
         if(::mCurrentLocation.isInitialized) {
             _repository.sendLocation(this.applicationContext,
                 mCurrentLocation.latitude,
@@ -91,29 +86,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnCompleteListene
         }
     }
 
+    override fun movementDetected() {
+        val text = _repository.status()
+        if(text.count() > 0)
+            tvLocation.text = text
+    }
+
     private fun sendLocationResponse(response: JSONObject) {
         Log.wtf("TAG", "onResponse: $response")
     }
 
     private fun connectionError() {
         showUserMessage(R.string.network_error)
-    }
-
-    override fun onSensorChanged(event: SensorEvent) {
-        if (event.sensor.type === Sensor.TYPE_ACCELEROMETER) {
-            // Shake detection
-            _repository.registerMovement(event.values.clone()){
-                shouldSendLocation ->
-                if(shouldSendLocation) {
-                    sendLocation()
-                }
-            }
-            printMovement()
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
-        // required method
     }
 
     private fun checkPermissions(): Boolean {
