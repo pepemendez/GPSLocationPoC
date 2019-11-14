@@ -184,8 +184,9 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
             if (isLocationEnabled()) {
                 mFusedLocationClient.lastLocation.addOnCompleteListener(this)
             } else {
-                showUserMessage(R.string.turn_on_location)
-                openLocationSettings()
+                val snack = Snackbar.make(tvLocation,R.string.turn_on_location,Snackbar.LENGTH_INDEFINITE)
+                snack.setAction(android.R.string.ok) {openLocationSettings()}
+                snack.show()
             }
         } else {
             requestPermissions()
