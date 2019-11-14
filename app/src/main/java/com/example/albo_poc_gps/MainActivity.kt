@@ -40,7 +40,9 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
     lateinit var mFusedLocationClient: FusedLocationProviderClient
     lateinit var mCurrentLocation: Coordinates
 
-    private val REQUESTPERMISSIONSREQUESTCODE = 420
+    private val _locationInterval: Long = 1000
+    private val _locationFastetsInterval: Long = 500
+    private val _requestPermissionsRequestCode = 420
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,7 +111,7 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
         ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
-            REQUESTPERMISSIONSREQUESTCODE
+            _requestPermissionsRequestCode
         )
     }
 
@@ -126,8 +128,8 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,grantResults: IntArray) {
         Log.wtf("TAG", "onRequestPermissionResult")
-        if ((requestCode == REQUESTPERMISSIONSREQUESTCODE) && (grantResults[0] != PackageManager.PERMISSION_GRANTED)) {
-            Toast.makeText(this@MainActivity, getString(R.string.permission_denied_explanation), Toast.LENGTH_LONG).show()
+        if ((requestCode == _requestPermissionsRequestCode) && (grantResults[0] != PackageManager.PERMISSION_GRANTED)) {
+            showUserMessage(R.string.permission_denied_explanation)
             requestPermissions()
         }
         else{
@@ -159,8 +161,8 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
     private fun requestNewLocationData() {
         var mLocationRequest = LocationRequest()
         mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        mLocationRequest.interval = 1000
-        mLocationRequest.fastestInterval = 500
+        mLocationRequest.interval = _locationInterval
+        mLocationRequest.fastestInterval = _locationFastetsInterval
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
