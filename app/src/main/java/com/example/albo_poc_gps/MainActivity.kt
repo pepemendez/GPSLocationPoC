@@ -27,6 +27,7 @@ import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import com.example.albo_poc_gps.data.Coordinates
 import com.example.albo_poc_gps.data.Movement
+import com.example.albo_poc_gps.httpRequestHelpers.NotificationBody
 import com.example.albo_poc_gps.repository.MovementComponentListener
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.OnCompleteListener
@@ -77,14 +78,18 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
-    override fun sendLocation(){
+    private fun sendLocationHttpRequest(params: NotificationBody){
+        _repository.sendLocation(this.applicationContext,
+            params,
+            ::sendLocationResponse,
+            ::connectionError
+        )
+    }
+
+    override fun movementReached(){
         if(::mCurrentLocation.isInitialized) {
-            _repository.sendLocation(this.applicationContext,
-                mCurrentLocation.latitude,
-                mCurrentLocation.longitude,
-                ::sendLocationResponse,
-                ::connectionError
-            )
+            val params = NotificationBody(getString(R.string.app_name), "(${mCurrentLocation.latitude}, ${mCurrentLocation.longitude})")
+            sendLocationHttpRequest(params)
         }
     }
 

@@ -25,7 +25,7 @@ interface IMovementComponent {
 }
 
 interface MovementComponentListener{
-    fun sendLocation()
+    fun movementReached()
     fun movementDetected()
 }
 
@@ -62,7 +62,7 @@ object AccelerationComponent : IMovementComponent, SensorEventListener {
             registerMovement(event.values.clone()){
                 shouldSendLocation ->
                 if(shouldSendLocation) {
-                    mListener.sendLocation()
+                    mListener.movementReached()
                 }
             }
         }

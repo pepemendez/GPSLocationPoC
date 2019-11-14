@@ -11,6 +11,7 @@ import org.json.JSONObject
 import android.media.RingtoneManager
 import android.media.Ringtone
 import com.example.albo_poc_gps.R
+import com.example.albo_poc_gps.httpRequestHelpers.NotificationBody
 
 
 private const val FCM_API = "https://fcm.googleapis.com/fcm/send"
@@ -18,21 +19,10 @@ private const val serverKey = "key=" + "firebase_key"
 private const val contentType = "application/json"
 
 interface INotificationComponent {
-    fun sendLocation(applicationContext: Context, latitude: Double, longitude: Double, response: (JSONObject) -> Unit, error: () -> Unit)
+    fun sendLocation(applicationContext: Context, content: NotificationBody, response: (JSONObject) -> Unit, error: () -> Unit)
 }
 
 object NotificationComponent : INotificationComponent {
-
-    private fun playSound(applicationContext: Context){
-        try {
-            val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val r = RingtoneManager.getRingtone(applicationContext, notification)
-            r.play()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
     private fun sendNotification(applicationContext: Context, notification: JSONObject, f: (JSONObject) -> Unit, error: () -> Unit){
         val jsonObjectRequest = object : JsonObjectRequest(FCM_API, notification,
             Response.Listener<JSONObject> { response ->
@@ -53,16 +43,14 @@ object NotificationComponent : INotificationComponent {
         requestQueue.add(jsonObjectRequest)
     }
 
-    override fun sendLocation(applicationContext: Context, latitude: Double, longitude: Double, f: (JSONObject) -> Unit, error: () -> Unit){
-        playSound(applicationContext)
-
+    override fun sendLocation(applicationContext: Context, content: NotificationBody, f: (JSONObject) -> Unit, error: () -> Unit){
         val topic = applicationContext.getString(R.string.notification_topic) //topic has to match what the receiver subscribed to
         val notification = JSONObject()
         val notificationBody = JSONObject()
 
         try {
-            notificationBody.put("title", "Albo poc")
-            notificationBody.put("message", "($latitude, $longitude)")   //Enter your notification message
+            notificationBody.put("title", content.title)
+            notificationBody.put("message", content.body)   //Enter your notification message
             notificationBody.put("uuid", UserPreferences().getUUID(applicationContext))
             notification.put("to", topic)
             notification.put("data", notificationBody)

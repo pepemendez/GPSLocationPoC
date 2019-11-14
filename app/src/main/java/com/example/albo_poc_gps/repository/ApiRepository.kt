@@ -2,6 +2,7 @@ package com.example.albo_poc_gps.repository
 
 import android.content.Context
 import android.hardware.SensorManager
+import com.example.albo_poc_gps.httpRequestHelpers.NotificationBody
 import org.json.JSONObject
 
 
@@ -11,8 +12,8 @@ object ApiRepository: ApiComponent {
     private val notificationRepository: INotificationComponent = NotificationComponent
     private val movementRepository: IMovementComponent = AccelerationComponent
 
-    override fun sendLocation(applicationContext: Context, latitude: Double, longitude: Double, response: (JSONObject) -> Unit, error: () -> Unit) {
-        notificationRepository.sendLocation(applicationContext, latitude, longitude, response, error)
+    override fun sendLocation(applicationContext: Context, params: NotificationBody, response: (JSONObject) -> Unit, error: () -> Unit) {
+        notificationRepository.sendLocation(applicationContext, params, response, error)
     }
 
     override fun registerMovement(event: FloatArray, shouldUpdateLocation: (Boolean) -> Unit) {
