@@ -32,6 +32,8 @@ import com.example.albo_poc_gps.repository.MovementComponentListener
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteListener<Location> {
 
@@ -134,8 +136,9 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,grantResults: IntArray) {
         Log.wtf("TAG", "onRequestPermissionResult")
         if ((requestCode == _requestPermissionsRequestCode) && (grantResults[0] != PackageManager.PERMISSION_GRANTED)) {
-            showUserMessage(R.string.permission_denied_explanation)
-            requestPermissions()
+            val snack = Snackbar.make(tvLocation,R.string.permission_rationale,Snackbar.LENGTH_INDEFINITE)
+            snack.setAction(android.R.string.ok) {requestPermissions()}
+            snack.show()
         }
         else{
             getLastLocation()
