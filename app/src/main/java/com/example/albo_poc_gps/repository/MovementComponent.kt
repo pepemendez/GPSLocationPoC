@@ -1,5 +1,6 @@
 package com.example.albo_poc_gps.repository
 
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -9,7 +10,7 @@ import com.example.albo_poc_gps.data.Movement
 interface IMovementComponent {
     fun registerMovement(event: FloatArray, shouldUpdateLocation: (Boolean) -> Unit)
     fun status(): String
-    fun registerMovementListener(sensorManager: SensorManager, movementComponentListener: MovementComponentListener): Boolean
+    fun registerMovementListener(context: Context, movementComponentListener: MovementComponentListener): Boolean
     fun unregisterMovementListener()
 }
 
@@ -23,13 +24,13 @@ object AccelerationComponent : IMovementComponent, SensorEventListener {
     private lateinit var mSensorManager: SensorManager
     private lateinit var mListener: MovementComponentListener
 
-    override fun registerMovementListener(sensorManager: SensorManager, onMovementComponentListener: MovementComponentListener): Boolean {
-        mSensorManager = sensorManager
+    override fun registerMovementListener(context: Context, onMovementComponentListener: MovementComponentListener): Boolean {
+        mSensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         mListener = onMovementComponentListener
-        var stepsSensor = mSensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        var stepsSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         return if(stepsSensor != null){
-            mSensorManager?.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_NORMAL)
+            mSensorManager.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_NORMAL)
         } else{
             false
         }

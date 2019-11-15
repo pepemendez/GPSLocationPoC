@@ -16,11 +16,11 @@ private const val FCM_API = "https://fcm.googleapis.com/fcm/send"
 private const val serverKey = "key=" + "firebase_key"
 private const val contentType = "application/json"
 
-interface INotificationComponent {
+interface INotificationHttpRequestComponent {
     fun sendLocation(applicationContext: Context, content: NotificationBody, response: (JSONObject) -> Unit, error: () -> Unit)
 }
 
-object NotificationComponent : INotificationComponent {
+object NotificationHttpRequestComponent : INotificationHttpRequestComponent {
     private fun sendNotification(applicationContext: Context, notification: JSONObject, f: (JSONObject) -> Unit, error: () -> Unit){
         val jsonObjectRequest = object : JsonObjectRequest(FCM_API, notification,
             Response.Listener<JSONObject> { response ->

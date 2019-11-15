@@ -1,23 +1,13 @@
 package com.example.albo_poc_gps
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.location.Location
 import android.location.LocationManager
-import android.net.Uri
 import android.os.Bundle
-import android.os.Looper
 import android.provider.Settings
 import android.util.Log
-import android.view.View
-import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.albo_poc_gps.repository.ApiRepository
@@ -25,26 +15,15 @@ import com.google.firebase.messaging.FirebaseMessaging
 import org.json.JSONObject
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
-import com.example.albo_poc_gps.data.Coordinates
-import com.example.albo_poc_gps.data.Movement
 import com.example.albo_poc_gps.httpRequestHelpers.NotificationBody
 import com.example.albo_poc_gps.repository.MovementComponentListener
-import com.google.android.gms.location.*
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.android.gms.tasks.Task
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.android.synthetic.main.activity_main.*
 
-class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteListener<Location> {
+class MainActivity : AppCompatActivity(), MovementComponentListener {
 
     private lateinit var tvLocation: TextView
     private val _repository = ApiRepository
-    private var sensorManager: SensorManager? = null
-    lateinit var mFusedLocationClient: FusedLocationProviderClient
-    lateinit var mCurrentLocation: Coordinates
 
-    private val _locationInterval: Long = 1000
-    private val _locationFastetsInterval: Long = 500
     private val _requestPermissionsRequestCode = 420
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,18 +31,14 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
         setContentView(R.layout.activity_main)
         tvLocation = findViewById(R.id.tv_location)
 
-        mCurrentLocation = Coordinates()
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
         FirebaseMessaging.getInstance().subscribeToTopic(getString(R.string.notification_topic))
-        getLastLocation()
     }
 
     override fun onResume() {
         super.onResume()
+        getLastLocation()
 
-        if(_repository.registerMovementListener(sensorManager!!, this)){
+        if(_repository.registerMovementListener(this, this)){
             showUserMessage(R.string.sensor_started)
         }
         else{
@@ -81,24 +56,33 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
     }
 
     private fun sendLocationHttpRequest(params: NotificationBody){
-        _repository.sendLocation(this.applicationContext,
-            params,
-            ::sendLocationResponse,
-            ::connectionError
-        )
+        _repository.sendLocation(this.applicationContext, params, ::sendLocationResponse, ::connectionError)
     }
 
     override fun movementReached(){
-        if(::mCurrentLocation.isInitialized) {
-            val params = NotificationBody(getString(R.string.app_name), "(${mCurrentLocation.latitude}, ${mCurrentLocation.longitude})")
-            sendLocationHttpRequest(params)
-        }
+        val location = _repository.getLocation()
+        val params = NotificationBody(getString(R.string.app_name), "(${location.latitude}, ${location.longitude})")
+        sendLocationHttpRequest(params)
     }
 
     override fun movementDetected() {
         val text = _repository.status()
         if(text.count() > 0)
             tvLocation.text = text
+    }
+
+    private fun getLastLocation() {
+        if (checkPermissions()) {
+            if (isLocationEnabled()) {
+                _repository.startLocation(this)
+            } else {
+                val snack = Snackbar.make(tvLocation,R.string.turn_on_location,Snackbar.LENGTH_INDEFINITE)
+                snack.setAction(android.R.string.ok) {openLocationSettings()}
+                snack.show()
+            }
+        } else {
+            requestPermissions()
+        }
     }
 
     private fun sendLocationResponse(response: JSONObject) {
@@ -134,7 +118,6 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,grantResults: IntArray) {
-        Log.wtf("TAG", "onRequestPermissionResult")
         if ((requestCode == _requestPermissionsRequestCode) && (grantResults[0] != PackageManager.PERMISSION_GRANTED)) {
             val snack = Snackbar.make(tvLocation,R.string.permission_rationale,Snackbar.LENGTH_INDEFINITE)
             snack.setAction(android.R.string.ok) {requestPermissions()}
@@ -142,54 +125,6 @@ class MainActivity : AppCompatActivity(), MovementComponentListener, OnCompleteL
         }
         else{
             getLastLocation()
-        }
-    }
-
-    private val mLocationCallback = object : LocationCallback() {
-        override fun onLocationResult(location: LocationResult) {
-            Log.wtf("TAG", "mLocationCallback ${location.lastLocation.latitude} ${location.lastLocation.longitude}")
-            mCurrentLocation.update(location.lastLocation.latitude, location.lastLocation.longitude)
-        }
-    }
-
-    override fun onComplete(task: Task<Location>) {
-        Log.wtf("TAG", "onComplete")
-
-        val location: Location? = task.result
-        if (location == null) {
-            showUserMessage(R.string.couldnt_retreive_gps_coordinates)
-            requestNewLocationData()
-        } else {
-            mCurrentLocation.update(location.latitude, location.longitude)
-            requestNewLocationData()
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun requestNewLocationData() {
-        var mLocationRequest = LocationRequest()
-        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        mLocationRequest.interval = _locationInterval
-        mLocationRequest.fastestInterval = _locationFastetsInterval
-
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper())
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun getLastLocation() {
-        Log.wtf("TAG", "getLastLocation")
-
-        if (checkPermissions()) {
-            if (isLocationEnabled()) {
-                mFusedLocationClient.lastLocation.addOnCompleteListener(this)
-            } else {
-                val snack = Snackbar.make(tvLocation,R.string.turn_on_location,Snackbar.LENGTH_INDEFINITE)
-                snack.setAction(android.R.string.ok) {openLocationSettings()}
-                snack.show()
-            }
-        } else {
-            requestPermissions()
         }
     }
 }
